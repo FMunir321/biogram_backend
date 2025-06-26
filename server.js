@@ -1,13 +1,20 @@
 require('./config/db');
-const UserRouter = require('./api/User');
+const express = require('express');
+const app = express();
+require('dotenv').config();
 
-const app = require('express')();
-const port = process.env.PORT || 3000;
-const bodyParser = require('express').json;
-app.use(bodyParser());
+// Routes
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
 
-app.use('/api/user', UserRouter);
+app.use(express.json());
 
-app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+// Mount routes
+app.use('/api/auth', authRoutes);
+app.use('/api/user', userRoutes);
+
+// Start server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 });
