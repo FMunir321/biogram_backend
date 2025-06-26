@@ -1,12 +1,11 @@
-const e = require('express');
 const mongoose = require('mongoose');
-const schema = mongoose.Schema;
+const Schema = mongoose.Schema;
 
-const UserVerificationSchema = new schema({
-    userId: String,
-    uniqueString: String,
-    createdAt: Date,
-    expiresAt: Date,
+const UserVerificationSchema = new Schema({
+    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    otp: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now },
+    expiresAt: { type: Date, required: true }
 });
 
 const UserVerification = mongoose.model('UserVerification', UserVerificationSchema);

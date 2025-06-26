@@ -16,32 +16,44 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-// Send verification email
-const sendVerificationEmail = ({ _id, email }) => {
-    const currentUrl = process.env.CURRENT_URL;
-    const uniqueString = uuidv4() + _id;
+// Generate 6-digit OTP
+const generateOTP = () => {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+};
 
+// Send verification email with OTP
+const sendVerificationEmail = (user) => {
+    const otp = generateOTP();
     const mailOptions = {
         from: process.env.AUTH_EMAIL,
-        to: email,
-        subject: 'Verify your email',
-        html: `<p>Click the link below to verify your email:</p>
-               <p>This link <b>expires in 6 hours</b>.</p>
-               <a href="${currentUrl}/api/auth/verify/${_id}/${uniqueString}">Verify Email</a>`
+        to: user.email,
+        subject: 'Verify your email with OTP',
+        html: `<p>Your email verification OTP is:</p>
+               <h2>${otp}</h2>
+               <p>This OTP <b>expires in 10 minutes</b>.</p>`
     };
 
-    bcrypt.hash(uniqueString, 10)
-        .then(hashedUniqueString => {
-            const newVerification = new UserVerification({
-                userId: _id,
-                uniqueString: hashedUniqueString,
-                createdAt: Date.now(),
-                expiresAt: Date.now() + 21600000 // 6 hours
-            });
+    // Hash OTP before saving
+    bcrypt.hash(otp, 10)
+        .then(hashedOTP => {
+            // Delete any existing OTP for this user
+            UserVerification.deleteMany({ userId: user._id })
+                .then(() => {
+                    const newVerification = new UserVerification({
+                        userId: user._id,
+                        otp: hashedOTP,
+                        createdAt: Date.now(),
+                        expiresAt: Date.now() + 10 * 60 * 1000 // 10 minutes
+                    });
 
-            newVerification.save()
-                .then(() => transporter.sendMail(mailOptions))
-                .catch(console.error);
+                    return newVerification.save();
+                })
+                .then(() => {
+                    transporter.sendMail(mailOptions)
+                        .then(() => console.log(`OTP sent to ${user.email}`))
+                        .catch(err => console.error('Error sending email:', err));
+                })
+                .catch(err => console.error('Error saving OTP:', err));
         });
 };
 
@@ -52,12 +64,12 @@ router.post('/signup', (req, res) => {
     email = email?.trim() || '';
     password = password?.trim() || '';
 
-    // Validation checks
+    // Validation
     if (!name || !email || !password) {
         return res.status(400).json({ error: 'All fields are required' });
     }
     if (!/^[a-zA-Z0-9]+$/.test(name)) {
-        return res.status(400).json({ error: 'Name can only contain alphanumeric characters' });
+        return res.status(400).json({ error: 'Name must be alphanumeric' });
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         return res.status(400).json({ error: 'Invalid email format' });
@@ -86,104 +98,77 @@ router.post('/signup', (req, res) => {
                             sendVerificationEmail(user);
                             res.status(201).json({
                                 status: "pending",
-                                message: "Verification email sent"
+                                message: "OTP sent to email",
+                                userId: user._id
                             });
                         })
-                        .catch(err => {
-                            console.error('Error saving user:', err);
-                            res.status(500).json({ error: 'Internal server error' });
-                        });
+                        .catch(err => res.status(500).json({ error: 'Error saving user' }));
                 });
         })
-        .catch(err => {
-            console.error('Error checking existing user:', err);
-            res.status(500).json({ error: 'Internal server error' });
-        });
+        .catch(err => res.status(500).json({ error: 'Server error' }));
 });
 
-// Email verification
-router.get('/verify/:userId/:uniqueString', (req, res) => {
-    const { userId, uniqueString } = req.params;
+// Verify OTP
+router.post('/verify-otp', (req, res) => {
+    const { userId, otp } = req.body;
+
+    if (!userId || !otp) {
+        return res.status(400).json({ error: 'User ID and OTP are required' });
+    }
 
     UserVerification.findOne({ userId })
         .then(record => {
             if (!record) {
-                return res.status(400).json({ error: 'Invalid verification link' });
+                return res.status(400).json({ error: 'OTP not found or expired' });
             }
 
+            // Check expiration
             if (record.expiresAt < Date.now()) {
-                // Delete expired records
-                UserVerification.deleteOne({ userId })
-                    .then(() => User.deleteOne({ _id: userId }))
-                    .then(() => {
-                        res.redirect(
-                            '/api/auth/verified?error=true&message=Verification%20expired'
-                        );
-                    })
-                    .catch(console.error);
-                return;
+                UserVerification.deleteOne({ _id: record._id });
+                return res.status(400).json({ error: 'OTP expired' });
             }
 
-            bcrypt.compare(uniqueString, record.uniqueString)
+            // Verify OTP
+            bcrypt.compare(otp, record.otp)
                 .then(isMatch => {
                     if (!isMatch) {
-                        return res.status(400).json({ error: 'Invalid verification link' });
+                        return res.status(400).json({ error: 'Invalid OTP' });
                     }
 
+                    // Update user verification status
                     User.updateOne({ _id: userId }, { verified: true })
-                        .then(() => UserVerification.deleteOne({ userId }))
-                        .then(() => res.redirect('/api/auth/verified'))
-                        .catch(err => {
-                            console.error('Error updating user:', err);
-                            res.status(500).json({ error: 'Internal server error' });
-                        });
-                })
-                .catch(err => {
-                    console.error('Error comparing strings:', err);
-                    res.status(500).json({ error: 'Internal server error' });
+                        .then(() => {
+                            // Delete verification record
+                            UserVerification.deleteOne({ _id: record._id });
+                            res.status(200).json({ message: 'Email verified successfully' });
+                        })
+                        .catch(err => res.status(500).json({ error: 'Error verifying user' }));
                 });
         })
-        .catch(err => {
-            console.error('Error finding verification record:', err);
-            res.status(500).json({ error: 'Internal server error' });
-        });
+        .catch(err => res.status(500).json({ error: 'Server error' }));
 });
 
-// Verification status
-router.get('/verified', (req, res) => {
-    const { error, message } = req.query;
+// Resend OTP
+router.post('/resend-otp', (req, res) => {
+    const { userId } = req.body;
 
-    if (error) {
-        return res.status(400).json({ error: decodeURIComponent(message) });
+    if (!userId) {
+        return res.status(400).json({ error: 'User ID is required' });
     }
 
-    res.status(200).json({
-        message: 'Email verified successfully! You can now login.'
-    });
-});
-
-// Resend verification email
-router.post('/resend-verification', (req, res) => {
-    const { email } = req.body;
-
-    if (!email) {
-        return res.status(400).json({ error: 'Email is required' });
-    }
-
-    User.findOne({ email })
+    User.findById(userId)
         .then(user => {
-            if (!user) return res.status(400).json({ error: 'User not found' });
+            if (!user) {
+                return res.status(400).json({ error: 'User not found' });
+            }
             if (user.verified) {
                 return res.status(400).json({ error: 'Email already verified' });
             }
 
             sendVerificationEmail(user);
-            res.status(200).json({ message: 'Verification email resent' });
+            res.status(200).json({ message: 'New OTP sent' });
         })
-        .catch(err => {
-            console.error('Error resending email:', err);
-            res.status(500).json({ error: 'Internal server error' });
-        });
+        .catch(err => res.status(500).json({ error: 'Server error' }));
 });
 
 // Signin
@@ -193,21 +178,25 @@ router.post('/signin', (req, res) => {
     password = password?.trim() || '';
 
     if (!email || !password) {
-        return res.status(400).json({ error: 'All fields are required' });
+        return res.status(400).json({ error: 'Email and password required' });
     }
 
     User.findOne({ email })
         .then(user => {
             if (!user) return res.status(400).json({ error: 'Invalid credentials' });
+
+            // Check verification status
             if (!user.verified) {
-                return res.status(400).json({ error: 'Email not verified' });
+                return res.status(403).json({
+                    error: 'Email not verified',
+                    userId: user._id
+                });
             }
 
+            // Verify password
             bcrypt.compare(password, user.password)
                 .then(isMatch => {
-                    if (!isMatch) {
-                        return res.status(400).json({ error: 'Invalid credentials' });
-                    }
+                    if (!isMatch) return res.status(400).json({ error: 'Invalid credentials' });
 
                     res.status(200).json({
                         message: 'Signin successful',
@@ -217,16 +206,9 @@ router.post('/signin', (req, res) => {
                             email: user.email
                         }
                     });
-                })
-                .catch(err => {
-                    console.error('Password comparison error:', err);
-                    res.status(500).json({ error: 'Internal server error' });
                 });
         })
-        .catch(err => {
-            console.error('Error finding user:', err);
-            res.status(500).json({ error: 'Internal server error' });
-        });
+        .catch(err => res.status(500).json({ error: 'Server error' }));
 });
 
 module.exports = router;
