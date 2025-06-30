@@ -4,6 +4,7 @@ const User = require('../models/User');
 const UserVerification = require('../models/UserVerification');
 const nodemailer = require('nodemailer');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 // Email transporter
@@ -28,12 +29,10 @@ const sendOTP = async (user, purpose, recipient) => {
     const newVerification = new UserVerification({
         userId: user._id,
         otp: hashedOTP,
-        type: purpose, // change 'purpose' to 'type'
+        type: purpose,
         createdAt: Date.now(),
         expiresAt: Date.now() + 10 * 60 * 1000 // 10 minutes
     });
-
-
 
     await newVerification.save();
 
@@ -62,6 +61,7 @@ router.post('/signup', async (req, res) => {
     try {
         const { fullName, username, dateOfBirth, password, email, phoneNumber } = req.body;
         const parsedDateOfBirth = dateOfBirth ? new Date(dateOfBirth) : null;
+
         // Update signup validation
         if (!fullName || !username || !dateOfBirth || !password || (!email && !phoneNumber)) {
             return res.status(400).json({ error: 'All fields are required' });
@@ -93,7 +93,8 @@ router.post('/signup', async (req, res) => {
             dateOfBirth: parsedDateOfBirth,
             email,
             phoneNumber,
-            password: hashedPassword
+            password: hashedPassword,
+            verified: false
         });
 
         const user = await newUser.save();
@@ -115,33 +116,69 @@ router.post('/signup', async (req, res) => {
     }
 });
 
-// Verify Signup OTP
-router.post('/verify-signup', async (req, res) => {
+// Unified OTP Verification
+router.post('/verify-otp', async (req, res) => {
     try {
         const { userId, otp } = req.body;
-        const record = await UserVerification.findOne({ userId, type: 'email' });
 
-        if (!record) return res.status(400).json({ error: 'Invalid OTP' });
-        if (record.expiresAt < Date.now()) {
-            await UserVerification.deleteOne({ _id: record._id });
-            return res.status(400).json({ error: 'OTP expired' });
+        // Find all active OTP records for the user
+        const records = await UserVerification.find({
+            userId,
+            expiresAt: { $gt: Date.now() } // Only non-expired records
+        });
+
+        if (!records || records.length === 0) {
+            return res.status(400).json({ error: 'OTP expired or not found' });
         }
 
-        const isValid = await bcrypt.compare(otp, record.otp);
-        if (!isValid) return res.status(400).json({ error: 'Invalid OTP' });
+        let isValid = false;
+        let matchedRecord = null;
 
-        // Update user verification status
-        await User.updateOne({ _id: userId }, { verified: true });
-        await UserVerification.deleteOne({ _id: record._id });
+        // Check all active OTPs
+        for (const record of records) {
+            const isMatch = await bcrypt.compare(otp, record.otp);
+            if (isMatch) {
+                isValid = true;
+                matchedRecord = record;
+                break;
+            }
+        }
 
-        res.status(200).json({ message: 'Account verified successfully' });
+        if (!isValid) {
+            return res.status(400).json({ error: 'Invalid OTP' });
+        }
+
+        // Delete all OTP records for this user
+        await UserVerification.deleteMany({ userId });
+
+        // Get user and update verification status if needed
+        const user = await User.findById(userId);
+        if (!user.verified) {
+            user.verified = true;
+            await user.save();
+        }
+
+        const token = generateToken(user);
+
+        res.status(200).json({
+            message: 'Verification successful',
+            token,
+            user: {
+                id: user._id,
+                fullName: user.fullName,
+                username: user.username,
+                email: user.email,
+                phoneNumber: user.phoneNumber,
+                verified: user.verified
+            }
+        });
     } catch (error) {
+        console.error('OTP verification error:', error);
         res.status(500).json({ error: 'Server error' });
     }
 });
 
 // Login
-// Updated login endpoint
 router.post('/login', async (req, res) => {
     try {
         const { identifier, password } = req.body;
@@ -168,71 +205,42 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ error: 'Invalid credentials' });
         }
 
-        // Check if account is verified
-        if (!user.verified) {
-            return res.status(403).json({
-                error: 'Account not verified',
-                userId: user._id
-            });
-        }
-
         // Determine contact method
         const recipient = user.email || user.phoneNumber;
         const type = user.email ? 'email' : 'phone';
 
-        // Send login OTP
+        // Always send login OTP regardless of verification status
         await sendOTP(user, 'login', recipient);
 
         res.status(200).json({
             status: 'otp_required',
-            message: 'OTP sent for login verification',
+            message: 'OTP sent for verification',
             userId: user._id,
-            contactMethod: type
+            contactMethod: type,
+            isVerified: user.verified
         });
     } catch (error) {
+        console.error('Login error:', error);
         res.status(500).json({ error: 'Server error' });
     }
 });
 
-// Verify Login OTP
-router.post('/verify-login', async (req, res) => {
-    try {
-        const { userId, otp } = req.body;
-        const record = await UserVerification.findOne({ userId, type: 'login' });
-
-        if (!record) return res.status(400).json({ error: 'Invalid OTP' });
-        if (record.expiresAt < Date.now()) {
-            await UserVerification.deleteOne({ _id: record._id });
-            return res.status(400).json({ error: 'OTP expired' });
-        }
-
-        const isValid = await bcrypt.compare(otp, record.otp);
-        if (!isValid) return res.status(400).json({ error: 'Invalid OTP' });
-
-        // Delete OTP record
-        await UserVerification.deleteOne({ _id: record._id });
-
-        // Get user data
-        const user = await User.findById(userId);
-
-        res.status(200).json({
-            message: 'Login successful',
-            user: {
-                id: user._id,
-                fullName: user.fullName,
-                username: user.username,
-                email: user.email,
-                phoneNumber: user.phoneNumber
-            }
-        });
-    } catch (error) {
-        res.status(500).json({ error: 'Server error' });
-    }
-});
+// Generate JWT token
+function generateToken(user) {
+    return jwt.sign(
+        {
+            id: user._id,
+            username: user.username,
+            email: user.email,
+            phoneNumber: user.phoneNumber
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }
+    );
+}
 
 // Dashboard route
 router.get('/dashboard', (req, res) => {
-    // Implement your dashboard logic here
     res.status(200).json({ message: 'Welcome to your dashboard!' });
 });
 
