@@ -21,7 +21,13 @@ const UserSchema = new mongoose.Schema({
     dateOfBirth: { type: Date, required: true },
     password: { type: String, required: true },
     verified: { type: Boolean, default: false },
-    createdAt: { type: Date, default: Date.now }
+    createdAt: { type: Date, default: Date.now },
+    emailVerified: { type: Boolean, default: false },
+    phoneVerified: { type: Boolean, default: false },
+    trustedDevices: [{
+        token: String,
+        expires: Date
+    }]
 }, {
     // Add this to handle either email or phone requirement
     validate: {
@@ -31,5 +37,7 @@ const UserSchema = new mongoose.Schema({
         message: 'Either email or phone number is required'
     }
 });
+
+
 
 module.exports = mongoose.model('User', UserSchema);

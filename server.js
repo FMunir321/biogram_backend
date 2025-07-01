@@ -2,16 +2,22 @@ require('./config/db');
 const express = require('express');
 const app = express();
 const cors = require('cors');
+const session = require('express-session');
 require('dotenv').config();
 
 app.use(cors());
+app.use(express.json());
+app.use(session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: process.env.NODE_ENV === 'production' }
+}));
 
 // Routes
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const socialLinkRoutes = require('./routes/socialLinkRoutes');
-
-app.use(express.json());
 
 // Mount routes
 app.use('/api/auth', authRoutes);
