@@ -11,12 +11,16 @@ const UserSchema = new mongoose.Schema({
     email: {
         type: String,
         unique: true,
-        sparse: true  // Allows null values while maintaining uniqueness
+        sparse: true
     },
     phoneNumber: {
         type: String,
         unique: true,
         sparse: true
+    },
+    profileImage: {
+        type: String,
+        default: ''
     },
     dateOfBirth: { type: Date, required: true },
     password: { type: String, required: true },
