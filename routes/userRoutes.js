@@ -4,8 +4,9 @@ const userController = require('../controllers/userController');
 const auth = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
-router.patch('/profile-image', auth, upload.single('profileImage'), userController.uploadProfileImage);
 router.get('/', auth, userController.getAllUsers);
 router.get('/:id', auth, userController.getUserById)
+router.patch('/profile-image', auth, upload.single('profileImage'), userController.uploadProfileImage);
+router.patch('/visibility', auth, userController.updateVisibilitySetting);
 
 module.exports = router;

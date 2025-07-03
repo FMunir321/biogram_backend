@@ -22,6 +22,7 @@ const UserSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
+    bio: { type: String, default: '' },
     dateOfBirth: { type: Date, required: true },
     password: { type: String, required: true },
     verified: { type: Boolean, default: false },
@@ -31,7 +32,15 @@ const UserSchema = new mongoose.Schema({
     trustedDevices: [{
         token: String,
         expires: Date
-    }]
+    }],
+    visibilitySettings: {
+        bio: { type: Boolean, default: false },
+        featuredLinks: { type: Boolean, default: false },
+        merch: { type: Boolean, default: false },
+        gallery: { type: Boolean, default: false },
+        contactInfo: { type: Boolean, default: false },
+        shouts: { type: Boolean, default: false }
+    }
 }, {
     // Add this to handle either email or phone requirement
     validate: {

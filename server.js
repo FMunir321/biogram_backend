@@ -27,11 +27,13 @@ app.use(session({
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const socialLinkRoutes = require('./routes/socialLinkRoutes');
+const thumbnailRoutes = require('./routes/thumbnailRoutes');
 
 // Mount routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/social-links', socialLinkRoutes);
+app.use('/api/thumbnails', thumbnailRoutes);
 
 // Start server
 const PORT = process.env.PORT || 5000;
