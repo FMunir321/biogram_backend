@@ -8,5 +8,6 @@ router.get('/', auth, userController.getAllUsers);
 router.get('/:id', auth, userController.getUserById)
 router.patch('/profile-image', auth, upload.single('profileImage'), userController.uploadProfileImage);
 router.patch('/visibility', auth, userController.updateVisibilitySetting);
+router.patch('/bio', auth, userController.updateBio);
 
 module.exports = router;

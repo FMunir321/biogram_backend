@@ -67,6 +67,38 @@ exports.updateVisibilitySetting = async (req, res) => {
     }
 };
 
+// Update user bio
+exports.updateBio = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { bio } = req.body;
+
+        // Validate input
+        if (typeof bio !== 'string' || bio.length > 500) {
+            return res.status(400).json({
+                error: 'Bio must be a string and less than 500 characters'
+            });
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { bio },
+            { new: true, runValidators: true }
+        ).select('bio');
+
+        res.status(200).json(updatedUser);
+    } catch (error) {
+        console.error('Update bio error:', error);
+
+        // Handle validation errors
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({ error: error.message });
+        }
+
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
 // Get all users (returning minimal public data)
 exports.getAllUsers = async (req, res) => {
     try {
