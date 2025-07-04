@@ -65,8 +65,29 @@ const uploadMerchImages = multer({
     { name: 'image', maxCount: 1 },
     { name: 'productImage', maxCount: 1 }
 ]);
+const galleryStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const dir = 'uploads/gallery/';
+        createDirectory(dir);
+        cb(null, dir);
+    },
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname);
+        const randomName = crypto.randomBytes(16).toString('hex');
+        cb(null, `${randomName}${ext}`);
+    }
+});
 
+// Create upload instance for gallery images
+const uploadGalleryImage = multer({
+    storage: galleryStorage,
+    fileFilter: imageFileFilter,
+    limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+}).single('galleryImage');
+
+// Update exports
 module.exports = {
     uploadProfileImage,
-    uploadMerchImages
+    uploadMerchImages,
+    uploadGalleryImage  // Add this
 };
