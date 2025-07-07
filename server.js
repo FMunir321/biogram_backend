@@ -39,7 +39,9 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.get('/api', (req, res) => {
     res.send('API is running');
 });
-
+app.get('/', (req, res) => {
+    res.send('Backend is deployed and working');
+});
 // Must be at the end
 const serverless = require('serverless-http');
 module.exports = serverless(app);
