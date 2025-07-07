@@ -18,6 +18,12 @@ const UserSchema = new mongoose.Schema({
         unique: true,
         sparse: true
     },
+    websiteUrl: {
+        type: String,
+        default: '',
+        match: [/https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/,
+            'Please use a valid URL']
+    },
     profileImage: {
         type: String,
         default: ''
@@ -34,12 +40,15 @@ const UserSchema = new mongoose.Schema({
         expires: Date
     }],
     visibilitySettings: {
-        bio: { type: Boolean, default: false },
-        featuredLinks: { type: Boolean, default: false },
-        merch: { type: Boolean, default: false },
-        gallery: { type: Boolean, default: false },
-        contactInfo: { type: Boolean, default: false },
-        shouts: { type: Boolean, default: false }
+        bio: { type: Boolean, default: true },
+        featuredLinks: { type: Boolean, default: true },
+        merch: { type: Boolean, default: true },
+        gallery: { type: Boolean, default: true },
+        contactInfo: { type: Boolean, default: true },
+        shouts: {
+            type: Boolean, default: true
+
+        }
     }
 }, {
     // Add this to handle either email or phone requirement
