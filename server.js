@@ -1,9 +1,9 @@
 require('dotenv').config();
-require('./config/db');
+// require('./config/db');
 const express = require('express');
 const app = express();
 const cors = require('cors');
-const session = require('express-session');
+// const session = require('express-session');
 const path = require('path');
 
 // Middleware
@@ -16,12 +16,12 @@ app.use(cors({
     credentials: true
 }));
 app.use(express.json());
-app.use(session({
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: true,
-    cookie: { secure: process.env.NODE_ENV === 'production' }
-}));
+// app.use(session({
+//     secret: process.env.SESSION_SECRET,
+//     resave: false,
+//     saveUninitialized: true,
+//     cookie: { secure: process.env.NODE_ENV === 'production' }
+// }));
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
