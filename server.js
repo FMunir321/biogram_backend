@@ -53,7 +53,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Test route
 app.get('/api', (req, res) => {
-    res.send('API is running ✅');
+    res.send('API is running 12 ✅');
 });
 
 // ✅ Always start the server on EC2
@@ -61,6 +61,7 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server running at http://0.0.0.0:${PORT}`);
 });
+
 
 
 // require('./config/db');
