@@ -52,5 +52,5 @@ app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
 app.get('/api', (req, res) => {
-    res.send('API is running');
+    res.send('API is running fssss');
 });
