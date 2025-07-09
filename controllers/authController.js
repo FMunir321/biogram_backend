@@ -35,12 +35,12 @@ const generateToken = user => jwt.sign({
 
 const generateOtpToken = (userId) => jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: `${OTP_TOKEN_EXPIRY_MINUTES}m` });
 
-const sendOTP = async (user, purpose, recipient) => {
+const sendOTP = async (user, type, recipient) => {
     const otp = generateOTP();
     const hashedOTP = await bcrypt.hash(otp, 10);
 
-    let method = purpose;
-    if (purpose === 'login') {
+    let method = type;
+    if (type === 'login') {
         method = user.email ? 'email' : 'phone';
     }
 
@@ -225,20 +225,20 @@ router.post('/verify-otp', async (req, res) => {
 
 router.post('/resend-otp', async (req, res) => {
     try {
-        const { userId, purpose } = req.body;
-        if (!userId || !purpose) return res.status(400).json({ error: 'userId and purpose are required' });
+        const { userId, type } = req.body;
+        if (!userId || !type) return res.status(400).json({ error: 'userId and purpose are required' });
 
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ error: 'User not found' });
 
         let recipient, method;
-        if (purpose === 'email' && user.email) {
+        if (type === 'email' && user.email) {
             recipient = user.email;
             method = 'email';
-        } else if (purpose === 'phone' && user.phoneNumber) {
+        } else if (type === 'phone' && user.phoneNumber) {
             recipient = user.phoneNumber;
             method = 'phone';
-        } else if (purpose === 'login') {
+        } else if (type === 'login') {
             recipient = user.email || user.phoneNumber;
             method = user.email ? 'email' : 'phone';
         } else {
@@ -246,7 +246,7 @@ router.post('/resend-otp', async (req, res) => {
         }
 
         await UserVerification.deleteMany({ userId, type: method });
-        await sendOTP(user, purpose, recipient);
+        await sendOTP(user, type, recipient);
         const otpToken = generateOtpToken(user._id);
 
         res.status(200).json({ message: 'OTP resent successfully', userId, contactMethod: method, otpToken });
