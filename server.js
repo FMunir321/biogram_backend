@@ -7,16 +7,10 @@ const cors = require('cors');
 const session = require('express-session');
 const path = require('path');
 
-// CORS Configuration
-const allowedOrigins = [
-    'http://localhost',
-    'https://your-frontend-domain.com', // Replace with real domain if deployed
-];
-
+// CORS Setup
 app.use(cors({
-    origin: function (origin, callback) {
-        // Allow requests with no origin (e.g., curl, mobile apps)
-        if (!origin || allowedOrigins.includes(origin)) {
+    origin: (origin, callback) => {
+        if (!origin || origin.startsWith('http://localhost') || origin.includes('your-live-frontend.com')) {
             callback(null, true);
         } else {
             callback(new Error('Not allowed by CORS'));
@@ -25,17 +19,15 @@ app.use(cors({
     credentials: true
 }));
 
-// Body parser
 app.use(express.json());
 
-// Session Setup
 app.use(session({
     secret: process.env.SESSION_SECRET || 'secret-key',
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: process.env.NODE_ENV === 'production', // Use true if using HTTPS
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+        secure: false,
+        sameSite: 'lax'
     }
 }));
 
@@ -48,7 +40,6 @@ const merchRoutes = require('./routes/merchRoutes');
 const galleryRoutes = require('./routes/galleryRoutes');
 const contactInfoRoutes = require('./routes/contactInfoRoutes');
 
-// Mount Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/social-links', socialLinkRoutes);
@@ -57,26 +48,19 @@ app.use('/api/merch', merchRoutes);
 app.use('/api/gallery', galleryRoutes);
 app.use('/api/contact-info', contactInfoRoutes);
 
-// Static file hosting (e.g., images, uploads)
+// Static
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Test route
 app.get('/api', (req, res) => {
-    res.send('API is running 12✅');
+    res.send('API is running ✅');
 });
 
-// Start the server only if not in a serverless environment (like Vercel)
-if (!process.env.VERCEL) {
-    const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => {
-        console.log(`🚀 Server running at http://localhost:${PORT}`);
-    });
-}
-
-// Export for serverless compatibility
-const serverless = require('serverless-http');
-module.exports = serverless(app);
-
+// ✅ Always start the server on EC2
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server running at http://0.0.0.0:${PORT}`);
+});
 
 
 // require('./config/db');
