@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const contactInfoController = require('../controllers/contactInfoController');
-const auth = require('../middleware/auth');
+const auth = require('../middleware/authMiddleware');
 
 // GET contact info (public access)
 router.get('/:id', auth, contactInfoController.getContactInfo);

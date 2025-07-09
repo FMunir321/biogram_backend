@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const merchController = require('../controllers/merchController');
-const auth = require('../middleware/auth');
+const auth = require('../middleware/authMiddleware');
 const { uploadMerchImages } = require('../middleware/upload');
 
 
