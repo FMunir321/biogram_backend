@@ -3,27 +3,38 @@ require('./config/db');
 const express = require('express');
 const app = express();
 const cors = require('cors');
-const session = require('express-session');
 const path = require('path');
 require('dotenv').config();
 
+
+const allowedOrigins = [
+    'http://localhost:',
+    'https://biogram-y2p8.vercel.app'
+];
+
 app.use(cors({
     origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps or curl)
+        // Allow requests with no origin (mobile apps, curl)
         if (!origin) return callback(null, true);
-        // Allow all localhost origins
-        if (origin.startsWith('http://localhost:')) return callback(null, true);
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
         return callback(new Error('Not allowed by CORS'));
     },
     credentials: true
 }));
+
+// app.use(cors({
+//     origin: (origin, callback) => {
+//         // Allow requests with no origin (like mobile apps or curl)
+//         if (!origin) return callback(null, true);
+//         // Allow all localhost origins
+//         if (origin.startsWith('http://localhost:')) return callback(null, true);
+//         return callback(new Error('Not allowed by CORS'));
+//     },
+//     credentials: true
+// }));
 app.use(express.json());
-app.use(session({
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: true,
-    cookie: { secure: process.env.NODE_ENV === 'production' }
-}));
 
 // Routes
 const authRoutes = require('./routes/authRoutes');
