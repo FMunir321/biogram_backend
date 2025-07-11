@@ -1,12 +1,15 @@
+
 require('./config/db');
 const express = require('express');
 const app = express();
 const cors = require('cors');
+const session = require('express-session');
 const path = require('path');
 require('dotenv').config();
 
 const allowedOrigins = [
-    'http://localhost',
+    'http://localhost:',
+    'http://localhost:3000',
     'https://biogram-y2p8.vercel.app'
 ];
 
@@ -22,6 +25,12 @@ app.use(cors({
     credentials: true
 }));
 app.use(express.json());
+app.use(session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: process.env.NODE_ENV === 'production' }
+}));
 
 // Routes
 const authRoutes = require('./routes/authRoutes');
@@ -50,5 +59,5 @@ app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
 app.get('/api', (req, res) => {
-    res.send('API is running fine');
+    res.send('API is running');
 });
