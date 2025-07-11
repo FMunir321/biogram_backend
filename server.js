@@ -12,7 +12,7 @@ app.use(cors({
         // Allow requests with no origin (like mobile apps or curl)
         if (!origin) return callback(null, true);
         // Allow all localhost origins
-        if (origin.startsWith('http://localhost:') || origin.startsWith('https://biogram-y2p8.vercel.app')) {
+        if (origin.startsWith('http://localhost:') || origin.startsWith('http://3.111.146.115:') || origin.startsWith('https://biogram-y2p8.vercel.app')) {
             return callback(null, true);
         }
         return callback(new Error('Not allowed by CORS'));
