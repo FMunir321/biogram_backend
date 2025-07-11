@@ -7,33 +7,18 @@ const path = require('path');
 require('dotenv').config();
 
 
-const allowedOrigins = [
-    'http://localhost:',
-    'https://biogram-y2p8.vercel.app'
-];
-
 app.use(cors({
     origin: (origin, callback) => {
-        // Allow requests with no origin (mobile apps, curl)
+        // Allow requests with no origin (like mobile apps or curl)
         if (!origin) return callback(null, true);
-        if (allowedOrigins.includes(origin)) {
+        // Allow all localhost origins
+        if (origin.startsWith('http://localhost:') || origin.startsWith('https://biogram-y2p8.vercel.app')) {
             return callback(null, true);
         }
         return callback(new Error('Not allowed by CORS'));
     },
     credentials: true
 }));
-
-// app.use(cors({
-//     origin: (origin, callback) => {
-//         // Allow requests with no origin (like mobile apps or curl)
-//         if (!origin) return callback(null, true);
-//         // Allow all localhost origins
-//         if (origin.startsWith('http://localhost:')) return callback(null, true);
-//         return callback(new Error('Not allowed by CORS'));
-//     },
-//     credentials: true
-// }));
 app.use(express.json());
 
 // Routes
