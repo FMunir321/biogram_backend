@@ -14,14 +14,47 @@ exports.createSocialLink = async (req, res) => {
   }
 };
 
+// PUT /social-links/:id
+exports.updateSocialLink = async (req, res) => {
+  console.log('Update social link request:', req.body);
+  try {
+    const { id } = req.params;
+    const userId = req.user.id; // Extracted from JWT token
+    const { platform, url } = req.body;
+
+    const link = await SocialLink.findById(id);
+    if (!link) return res.status(404).json({ error: 'Link not found' });
+
+    // Authorization check
+    if (link.userId.toString() !== userId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Apply updates
+    if (platform) link.platform = platform;
+    if (url) link.url = url;
+
+    await link.validate(); // Optional: to catch validation issues early
+    const updatedLink = await link.save();
+
+    res.status(200).json(updatedLink);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
 // DELETE /social-links/:id
 exports.deleteSocialLink = async (req, res) => {
   try {
     const { id } = req.params;
-    const { userId } = req.body; // userId must be provided in body for verification
+    const userId = req.user.id; // Extracted from token
+
     const link = await SocialLink.findById(id);
     if (!link) return res.status(404).json({ error: 'Link not found' });
-    if (link.userId.toString() !== userId) return res.status(403).json({ error: 'Forbidden' });
+
+    if (link.userId.toString() !== userId)
+      return res.status(403).json({ error: 'Forbidden' });
+
     await link.deleteOne();
     res.status(204).send();
   } catch (err) {
