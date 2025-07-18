@@ -6,22 +6,21 @@ exports.createShout = async (req, res) => {
     try {
         const { isMedia } = req.body;
 
-        if (!req.files || !req.files.file || !req.files.file[0]) {
+        if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
         }
 
-        const file = req.files.file[0];
-        const fileUrl = `/uploads/shouts/${isMedia === 'true' ? 'videos' : 'images'}/${file.filename}`;
+        const file = req.file;
+        const fileUrl = `/uploads/shouts/${isMedia ? 'videos' : 'images'}/${file.filename}`;
 
         const shout = new Shout({
-            userId: req.user.id, // assuming user is authenticated
+            userId: req.user.id,
             isMedia: isMedia === 'true',
-            imageUrl: isMedia === 'true' ? undefined : fileUrl,
-            videoUrl: isMedia === 'true' ? fileUrl : undefined,
+            imageUrl: isMedia ? undefined : fileUrl,
+            videoUrl: isMedia ? fileUrl : undefined,
         });
 
         await shout.save();
-
         res.status(201).json({ message: 'Shout created successfully', shout });
     } catch (err) {
         console.error(err);
