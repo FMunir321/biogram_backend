@@ -1,6 +1,8 @@
 const User = require('../models/User');
 const fs = require('fs');
 const path = require('path');
+const bcrypt = require('bcrypt');
+
 
 exports.uploadProfileImage = async (req, res) => {
     try {
@@ -166,6 +168,43 @@ exports.getUserById = async (req, res) => {
         if (error.name === 'CastError') {
             return res.status(400).json({ error: 'Invalid user ID' });
         }
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.changePassword = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { currentPassword, newPassword } = req.body;
+
+        // Validate input
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ error: 'Both current and new password are required' });
+        }
+
+        if (currentPassword === newPassword) {
+            return res.status(400).json({ error: 'New password must be different from current password' });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Verify current password
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ error: 'Current password is incorrect' });
+        }
+
+        // Update password
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        user.password = hashedPassword;
+        await user.save();
+
+        res.status(200).json({ message: 'Password changed successfully' });
+    } catch (error) {
+        console.error('Password change error:', error);
         res.status(500).json({ error: 'Server error' });
     }
 };
