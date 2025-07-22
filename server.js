@@ -1,10 +1,12 @@
 
 require('./config/db');
 const express = require('express');
+const cron = require('node-cron');
 const app = express();
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
+
 
 
 app.use(cors({
@@ -48,7 +50,26 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+    // cron.schedule('* * * * * *', async () => {
+    //     try {
+    //         const fifteenDaysAgo = new Date();
+    //         // fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
+    //         const thirtySecondsAgo = new Date(Date.now() - 30 * 1000);
+    //         console.log('Checking deletion for users before:cccccccccccccccccccccccccccccccccccc', thirtySecondsAgo.toISOString());
+
+    //         const result = await User.deleteMany({
+    //             deletionScheduled: true,
+    //             deletionScheduledAt: { $lte: thirtySecondsAgo }
+    //         });
+
+    //         console.log(`Permanently deleted ${result.deletedCount} accounts`);
+    //     } catch (error) {
+    //         console.error('Account cleanup error:', error);
+    //     }
+    // });
 });
 app.get('/api', (req, res) => {
     res.send('API is running');
 });
+
+// Schedule daily cleanup job (runs at 3 AM daily)

@@ -49,7 +49,9 @@ const UserSchema = new mongoose.Schema({
             type: Boolean, default: true
 
         }
-    }
+    },
+    deletionScheduled: { type: Boolean, default: false },
+    deletionScheduledAt: Date
 }, {
     // Add this to handle either email or phone requirement
     validate: {

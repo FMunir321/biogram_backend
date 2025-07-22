@@ -10,5 +10,7 @@ router.patch('/profile-image', auth, uploadProfileImage, userController.uploadPr
 router.patch('/visibility', auth, userController.updateVisibilitySetting);
 router.patch('/bio', auth, userController.updateBio);
 router.put('/change-password', auth, userController.changePassword);
+router.delete('/delete-account', auth, userController.deleteAccount);
+router.post('/recover-account', userController.recoverAccount);
 
 module.exports = router;

@@ -137,12 +137,24 @@ router.post('/signup', validateSignup, async (req, res) => {
             otpToken
         });
     } catch (error) {
+        if (error?.code === 11000 || error?.name === 'MongoServerError') {
+            const field = error?.keyPattern
+                ? Object.keys(error.keyPattern)[0]
+                : (error?.message.match(/index: (\w+)_1/)?.[1] || 'Field');
+
+            let message = `${field} already exists`;
+            if (field === 'username') message = 'Username taken';
+            if (field === 'email') message = 'Email already registered';
+            if (field === 'phoneNumber') message = 'Phone number already registered';
+
+            return res.status(409).json({ error: message });
+        }
         console.error('Signup error:', error);
         if (error.name === 'MongoError' && error.code === 11000) {
             const field = Object.keys(error.keyPattern)[0];
             return res.status(409).json({ error: `${field} already exists` });
         }
-        res.status(500).json({ error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error' });
+        res.status(500).json({ error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error11111111111111' });
     }
 });
 
@@ -289,5 +301,69 @@ router.post('/login', async (req, res) => {
         res.status(500).json({ error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error' });
     }
 });
+
+//Below is the API Logic for scheduling a user account deletion based on client requirements.
+// router.post('/login', async (req, res) => {
+//     try {
+//         const { identifier, password, deviceToken } = req.body;
+//         if (!identifier || !password) return res.status(400).json({ error: 'Identifier and password required' });
+
+//         const user = await User.findOne({ $or: [{ email: identifier }, { phoneNumber: identifier }] });
+//         if (!user) return res.status(400).json({ error: 'Invalid credentials' });
+
+//         // Check if account is scheduled for deletion or already deleted
+//         if (user.deletionScheduled) {
+//             const now = new Date();
+//             const deletionDate = new Date(user.deletionScheduledAt);
+//             const recoveryDeadline = new Date(deletionDate.getTime() + (15 * 24 * 60 * 60 * 1000)); // 15 days after deletion scheduled
+
+//             if (now > recoveryDeadline) {
+//                 return res.status(403).json({
+//                     error: 'Account permanently deleted. Please sign up again.',
+//                     permanentDeletion: true
+//                 });
+//             } else {
+//                 const daysRemaining = Math.ceil((recoveryDeadline - now) / (1000 * 60 * 60 * 24));
+//                 return res.status(403).json({
+//                     error: `Account scheduled for deletion. You have ${daysRemaining} days to recover your account.`,
+//                     scheduledForDeletion: true,
+//                     daysRemaining,
+//                     canRecover: true
+//                 });
+//             }
+//         }
+
+//         const isMatch = await bcrypt.compare(password, user.password);
+//         if (!isMatch) return res.status(400).json({ error: 'Invalid credentials' });
+
+//         if (deviceToken && user.trustedDevices) {
+//             const now = new Date();
+//             for (const device of user.trustedDevices) {
+//                 const isMatch = await bcrypt.compare(deviceToken, device.token);
+//                 if (isMatch && device.expires > now) {
+//                     const token = generateToken(user);
+//                     return res.status(200).json({ message: 'Login successful', token, user });
+//                 }
+//             }
+//         }
+
+//         const recipient = user.email || user.phoneNumber;
+//         const method = user.email ? 'email' : 'phone';
+//         await sendOTP(user, 'login', recipient);
+//         const otpToken = generateOtpToken(user._id);
+
+//         res.status(200).json({
+//             status: 'otp_required',
+//             message: 'OTP sent for verification',
+//             userId: user._id,
+//             contactMethod: method,
+//             isVerified: user.verified,
+//             otpToken
+//         });
+//     } catch (error) {
+//         console.error('Login error:', error);
+//         res.status(500).json({ error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error' });
+//     }
+// });
 
 module.exports = router;
