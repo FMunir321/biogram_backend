@@ -47,11 +47,10 @@ const UserSchema = new mongoose.Schema({
         contactInfo: { type: Boolean, default: true },
         shouts: {
             type: Boolean, default: true
-
         }
     },
     deletionScheduled: { type: Boolean, default: false },
-    deletionScheduledAt: Date
+    deletionScheduledAt: Date,
 }, {
     // Add this to handle either email or phone requirement
     validate: {
@@ -59,9 +58,54 @@ const UserSchema = new mongoose.Schema({
             return this.email || this.phoneNumber;
         },
         message: 'Either email or phone number is required'
-    }
+    },
+    // Add these options for virtual fields
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+    timestamps: true
 });
 
+// Virtual for like count (number of likes received)
+UserSchema.virtual('likeCount', {
+    ref: 'ProfileLike',
+    localField: '_id',
+    foreignField: 'likedUser',
+    count: true
+});
 
+// Virtual for likes received (full like objects)
+UserSchema.virtual('likesReceived', {
+    ref: 'ProfileLike',
+    localField: '_id',
+    foreignField: 'likedUser'
+});
+
+// Virtual for likes given (who this user has liked)
+UserSchema.virtual('likesGiven', {
+    ref: 'ProfileLike',
+    localField: '_id',
+    foreignField: 'liker'
+});
+
+// Method to check if current user has liked another user
+UserSchema.methods.hasLiked = async function (userId) {
+    const like = await mongoose.model('ProfileLike').findOne({
+        liker: this._id,
+        likedUser: userId
+    });
+    return !!like;
+};
+
+// Method to get like count (alternative to virtual)
+UserSchema.methods.getLikeCount = async function () {
+    return await mongoose.model('ProfileLike').countDocuments({
+        likedUser: this._id
+    });
+};
+
+// Index for better performance on queries
+UserSchema.index({ username: 1 });
+UserSchema.index({ email: 1 }, { sparse: true });
+UserSchema.index({ phoneNumber: 1 }, { sparse: true });
 
 module.exports = mongoose.model('User', UserSchema);

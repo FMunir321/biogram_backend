@@ -32,6 +32,7 @@ const merchRoutes = require('./routes/merchRoutes');
 const galleryRoutes = require('./routes/galleryRoutes');
 const contactInfoRoutes = require('./routes/contactInfoRoutes');
 const shoutRoutes = require('./routes/shoutRoutes');
+const likeRoutes = require('./routes/likeRoutes');
 
 // Mount routes
 app.use('/api/auth', authRoutes);
@@ -42,6 +43,8 @@ app.use('/api/merch', merchRoutes);
 app.use('/api/gallery', galleryRoutes);
 app.use('/api/contact-info', contactInfoRoutes);
 app.use('/api/shouts', shoutRoutes);
+app.use('/api/likes', likeRoutes);
+
 
 // Serve static files from the "uploads" directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

@@ -2,6 +2,7 @@ const User = require('../models/User');
 const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcrypt');
+const ProfileLike = require('../models/ProfileLike');
 
 
 exports.uploadProfileImage = async (req, res) => {
@@ -120,9 +121,13 @@ exports.getAllUsers = async (req, res) => {
 // Get single user by ID (with visibility settings applied for non-owners)
 exports.getUserById = async (req, res) => {
     try {
-        const user = await User.findById(req.params.id)
-            .select('-password -trustedDevices -__v');
 
+        const user = await User.findById(req.params.id)
+            .select('-password -trustedDevices -__v')
+            .populate({
+                path: 'likeCount', // Populates the virtual field
+                options: { virtuals: true }
+            });
         if (!user) return res.status(404).json({ error: 'User not found' });
 
         // Check if requester is the profile owner
@@ -162,6 +167,12 @@ exports.getUserById = async (req, res) => {
                 publicUser.shouts = undefined;
             }
         }
+        let isLiked = false;
+        if (req.user) {
+            isLiked = await user.hasLiked(req.user.id); // Uses the schema method
+        }
+        publicUser.likeCount = user.likeCount || 0; // Fallback to 0 if undefined
+        publicUser.isLiked = isLiked;
 
         res.status(200).json(publicUser);
     } catch (error) {
@@ -287,5 +298,31 @@ exports.recoverAccount = async (req, res) => {
         res.status(200).json({ message: 'Account successfully recovered. You can now log in.' });
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
+    }
+};
+// Add this to getUserProfile or searchUsers functions
+exports.getUserProfile = async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id).select('-password');
+
+        // Get like count
+        const likeCount = await ProfileLike.countDocuments({ likedUser: user._id });
+
+        // Check if current user liked this profile
+        let isLiked = false;
+        if (req.user) {
+            isLiked = !!(await ProfileLike.findOne({
+                liker: req.user.id,
+                likedUser: user._id
+            }));
+        }
+
+        res.json({
+            ...user.toObject(),
+            likeCount,
+            isLiked
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 };
