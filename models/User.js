@@ -50,6 +50,14 @@ const UserSchema = new mongoose.Schema({
 
         }
     },
+    analytics: {
+        profileViews: { type: Number, default: 0 },
+        linkClicks: { type: Number, default: 0 },
+        visitors: [{
+            timestamp: { type: Date, default: Date.now },
+            ipAddress: { type: String, required: true }
+        }]
+    },
     deletionScheduled: { type: Boolean, default: false },
     deletionScheduledAt: Date
 }, {
