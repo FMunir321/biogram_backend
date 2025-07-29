@@ -27,7 +27,7 @@ exports.createThumbnail = async (req, res) => {
 
 // Get thumbnails with visibility rules
 exports.getThumbnails = async (req, res) => {
-    console.log("Authenticated user:", req.user);
+    
     try {
         const userId = req.user.id;
         const targetUserId = req.params.userId;
