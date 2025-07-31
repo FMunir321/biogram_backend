@@ -53,14 +53,14 @@ exports.deleteShout = async (req, res) => {
         }
 
         // Delete the associated media file
-        const mediaPath = path.join(
-            __dirname,
-            '..',
-            shout.isMedia ? shout.videoUrl : shout.imageUrl
-        );
+        const mediaUrl = shout.isMedia ? shout.videoUrl : shout.imageUrl;
 
-        if (fs.existsSync(mediaPath)) {
-            fs.unlinkSync(mediaPath);
+        if (mediaUrl) {
+            const mediaPath = path.join(__dirname, '..', mediaUrl);
+
+            if (fs.existsSync(mediaPath)) {
+                fs.unlinkSync(mediaPath);
+            }
         }
 
         // Delete the shout from the DB
