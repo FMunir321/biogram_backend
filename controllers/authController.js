@@ -86,29 +86,76 @@ const validateSignup = [
     }
 ];
 
+const usernameRegex = /^[a-zA-Z0-9_]+$/; // allow letters, numbers, underscores
+const phoneRegex = /^\+?[1-9]\d{7,14}$/; // basic international phone format (adjust if needed)
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 router.post('/signup', validateSignup, async (req, res) => {
     try {
-        const { fullName, username, dateOfBirth, password, email, phoneNumber } = req.body;
-        const parsedDateOfBirth = new Date(dateOfBirth);
+        let { fullName, username, dateOfBirth, password, email, phoneNumber } = req.body;
 
+        // Trim inputs to avoid accidental spaces
+        fullName = fullName?.trim();
+        username = username?.trim();
+        email = email?.trim();
+        phoneNumber = phoneNumber?.trim();
+
+        // Basic required-field checks
         if (!email && !phoneNumber) {
             return res.status(400).json({ error: 'Email or phone number is required' });
         }
+        if (!username) {
+            return res.status(400).json({ error: 'Username is required' });
+        }
+        if (!password) {
+            return res.status(400).json({ error: 'Password is required' });
+        }
 
+        // Validate username format
+        if (!usernameRegex.test(username)) {
+            return res.status(400).json({
+                error: 'Username may only contain letters, numbers, and underscores, with no spaces.'
+            });
+        }
+
+        // Validate email if provided
+        if (email && !emailRegex.test(email)) {
+            return res.status(400).json({ error: 'Invalid email format.' });
+        }
+
+        // Validate phone if provided
+        if (phoneNumber && !phoneRegex.test(phoneNumber)) {
+            return res.status(400).json({ error: 'Invalid phone number format.' });
+        }
+
+        // Password rules example: min 8 chars, no leading/trailing spaces
+        if (password.length < 8) {
+            return res.status(400).json({ error: 'Password must be at least 8 characters long.' });
+        }
+        if (password !== password.trim()) {
+            return res.status(400).json({ error: 'Password cannot have leading or trailing spaces.' });
+        }
+
+        const parsedDateOfBirth = dateOfBirth ? new Date(dateOfBirth) : null;
+        if (dateOfBirth && isNaN(parsedDateOfBirth.getTime())) {
+            return res.status(400).json({ error: 'Invalid date of birth.' });
+        }
+
+        // Check existing user conflicts
         const existingUser = await User.findOne({
-            $or: [
-                { email },
-                { username },
-                { phoneNumber }
-            ]
+            $or: [{ email }, { username }, { phoneNumber }]
         });
 
         if (existingUser) {
-            if (existingUser.username === username) return res.status(409).json({ error: 'Username taken' });
-            if (email && existingUser.email === email) return res.status(409).json({ error: 'Email already registered' });
-            if (phoneNumber && existingUser.phoneNumber === phoneNumber) return res.status(409).json({ error: 'Phone number already registered' });
+            if (existingUser.username === username)
+                return res.status(409).json({ error: 'Username taken' });
+            if (email && existingUser.email === email)
+                return res.status(409).json({ error: 'Email already registered' });
+            if (phoneNumber && existingUser.phoneNumber === phoneNumber)
+                return res.status(409).json({ error: 'Phone number already registered' });
         }
 
+        // Hash and create user
         const hashedPassword = await bcrypt.hash(password, 10);
         const newUser = new User({
             fullName,
@@ -123,10 +170,10 @@ router.post('/signup', validateSignup, async (req, res) => {
         });
 
         const user = await newUser.save();
+
         const recipient = email || phoneNumber;
         const type = email ? 'email' : 'phone';
         await sendOTP(user, type, recipient);
-
         const otpToken = generateOtpToken(user._id);
 
         res.status(201).json({
@@ -137,10 +184,11 @@ router.post('/signup', validateSignup, async (req, res) => {
             otpToken
         });
     } catch (error) {
+        // Duplicate key / unique constraint handling
         if (error?.code === 11000 || error?.name === 'MongoServerError') {
             const field = error?.keyPattern
                 ? Object.keys(error.keyPattern)[0]
-                : (error?.message.match(/index: (\w+)_1/)?.[1] || 'Field');
+                : error?.message.match(/index: (\w+)_1/)?.[1] || 'Field';
 
             let message = `${field} already exists`;
             if (field === 'username') message = 'Username taken';
@@ -149,14 +197,17 @@ router.post('/signup', validateSignup, async (req, res) => {
 
             return res.status(409).json({ error: message });
         }
+
         console.error('Signup error:', error);
-        if (error.name === 'MongoError' && error.code === 11000) {
-            const field = Object.keys(error.keyPattern)[0];
-            return res.status(409).json({ error: `${field} already exists` });
-        }
-        res.status(500).json({ error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error11111111111111' });
+        res.status(500).json({
+            error:
+                process.env.NODE_ENV === 'development'
+                    ? error.message
+                    : 'Internal server error'
+        });
     }
 });
+
 
 router.post('/verify-otp', async (req, res) => {
     try {
