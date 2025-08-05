@@ -6,8 +6,11 @@ const path = require('path');
 // Create new merch item
 exports.createMerchItem = async (req, res) => {
     try {
-        const { category, url, title, price } = req.body;
+        const { category, url, title, price, Price } = req.body;
         const userId = req.user.id;
+
+        // Handle both 'price' and 'Price' (case sensitivity fix)
+        const finalPrice = price || Price;
 
         // Validate required fields
         if (!category || !url || !title) {
@@ -15,7 +18,7 @@ exports.createMerchItem = async (req, res) => {
         }
 
         // Validate price if provided (allow ranges like "500-1000" or single values)
-        if (price && typeof price !== 'string' && typeof price !== 'number') {
+        if (finalPrice && typeof finalPrice !== 'string' && typeof finalPrice !== 'number') {
             return res.status(400).json({ error: 'Price must be a string or number' });
         }
 
@@ -25,7 +28,7 @@ exports.createMerchItem = async (req, res) => {
             category,
             url,
             title,
-            price: price || null,
+            price: finalPrice || null,
             image: req.files['image'] ? req.files['image'][0].path : '',
             productImage: req.files['productImage'] ? req.files['productImage'][0].path : ''
         });

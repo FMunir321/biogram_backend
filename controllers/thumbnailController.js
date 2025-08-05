@@ -7,15 +7,7 @@ exports.createThumbnail = async (req, res) => {
     try {
         const { type, title, url, thumbnailImage, image, background, feature } = req.body;
 
-        // Log the received payload for debugging
-        console.log('Received thumbnail payload:', {
-            type,
-            title,
-            url,
-            thumbnailImage: thumbnailImage ? 'Image provided' : 'No image',
-            background,
-            user: req.user.id
-        });
+
 
         // Validate required fields
         if (!type || !title || !url) {
@@ -36,7 +28,6 @@ exports.createThumbnail = async (req, res) => {
         });
 
         await thumbnail.save();
-        console.log('Thumbnail created successfully:', thumbnail._id);
         res.status(201).json(thumbnail);
     } catch (error) {
         console.error('Error creating thumbnail:', error);

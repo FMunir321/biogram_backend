@@ -135,16 +135,16 @@ exports.getUserById = async (req, res) => {
 
         if (isOwner) {
             // 🔓 Owner: include all private data unconditionally
-            publicUser.shouts = await Shout.find({ user: user._id });
+            publicUser.shouts = await Shout.find({ userId: user._id });
             publicUser.gallery = await Gallery.find({ user: user._id });
             publicUser.contactInfo = await ContactInfo.findOne({ user: user._id });
             publicUser.merch = await Merch.find({ user: user._id });
-            publicUser.featuredLinks = await SocialLink.find({ user: user._id });
+            publicUser.featuredLinks = await SocialLink.find({ userId: user._id });
         } else {
             // 🔒 Not owner: only include if allowed by visibilitySettings
 
             if (user.visibilitySettings?.shouts) {
-                publicUser.shouts = await Shout.find({ user: user._id });
+                publicUser.shouts = await Shout.find({ userId: user._id });
             }
 
             if (user.visibilitySettings?.gallery) {
@@ -163,7 +163,7 @@ exports.getUserById = async (req, res) => {
             }
 
             if (user.visibilitySettings?.featuredLinks) {
-                publicUser.featuredLinks = await SocialLink.find({ user: user._id });
+                publicUser.featuredLinks = await SocialLink.find({ userId: user._id });
             }
 
             // Hide bio if needed
