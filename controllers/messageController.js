@@ -22,6 +22,19 @@ const createMessage = async (req, res) => {
         const message = new messageModel({ chatId, senderId, text });
         const response = await message.save();
 
+        // Get socket.io instance and emit message to chat room
+        const io = req.app.get('io');
+        if (io) {
+            console.log(`Emitting message to room ${chatId}:`, response);
+            io.to(chatId).emit('getMessage', {
+                _id: response._id,
+                chatId: response.chatId,
+                senderId: response.senderId,
+                text: response.text,
+                createdAt: response.createdAt
+            });
+        }
+
         return res.status(201).json(response);
 
     } catch (error) {
