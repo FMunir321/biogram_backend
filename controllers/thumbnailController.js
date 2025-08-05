@@ -7,20 +7,39 @@ exports.createThumbnail = async (req, res) => {
     try {
         const { type, title, url, thumbnailImage, image, background, feature } = req.body;
 
+        // Log the received payload for debugging
+        console.log('Received thumbnail payload:', {
+            type,
+            title,
+            url,
+            thumbnailImage: thumbnailImage ? 'Image provided' : 'No image',
+            background,
+            user: req.user.id
+        });
+
+        // Validate required fields
+        if (!type || !title || !url) {
+            return res.status(400).json({ 
+                error: 'Title, URL, and Thumbnail Type are required.' 
+            });
+        }
+
         const thumbnail = new Thumbnail({
             user: req.user.id,
             type,
             title,
             url,
-            thumbnailImage,
-            image,
-            background,
-            feature
+            thumbnailImage: thumbnailImage || null,
+            image: image || null,
+            background: background || '#7ecfa7', // Default background color
+            feature: feature || false // Default to false for user-created thumbnails
         });
 
         await thumbnail.save();
+        console.log('Thumbnail created successfully:', thumbnail._id);
         res.status(201).json(thumbnail);
     } catch (error) {
+        console.error('Error creating thumbnail:', error);
         res.status(500).json({ error: 'Server error' });
     }
 };
@@ -46,6 +65,17 @@ exports.getThumbnails = async (req, res) => {
 
         res.status(200).json(thumbnails);
     } catch (error) {
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+// Get current user's thumbnails
+exports.getMyThumbnails = async (req, res) => {
+    try {
+        const thumbnails = await Thumbnail.find({ user: req.user.id }).sort({ createdAt: -1 });
+        res.status(200).json(thumbnails);
+    } catch (error) {
+        console.error('Error fetching thumbnails:', error);
         res.status(500).json({ error: 'Server error' });
     }
 };
