@@ -22,6 +22,11 @@ const MerchSchema = new mongoose.Schema({
         required: true,
         maxlength: [100, 'Title cannot exceed 100 characters']
     },
+    price: {
+        type: String,
+        default: null,
+        trim: true
+    },
     image: {
         type: String,
         default: ''

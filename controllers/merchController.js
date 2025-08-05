@@ -6,12 +6,17 @@ const path = require('path');
 // Create new merch item
 exports.createMerchItem = async (req, res) => {
     try {
-        const { category, url, title } = req.body;
+        const { category, url, title, price } = req.body;
         const userId = req.user.id;
 
         // Validate required fields
         if (!category || !url || !title) {
             return res.status(400).json({ error: 'Category, URL, and title are required' });
+        }
+
+        // Validate price if provided (allow ranges like "500-1000" or single values)
+        if (price && typeof price !== 'string' && typeof price !== 'number') {
+            return res.status(400).json({ error: 'Price must be a string or number' });
         }
 
         // Create new merch item
@@ -20,6 +25,7 @@ exports.createMerchItem = async (req, res) => {
             category,
             url,
             title,
+            price: price || null,
             image: req.files['image'] ? req.files['image'][0].path : '',
             productImage: req.files['productImage'] ? req.files['productImage'][0].path : ''
         });
@@ -115,7 +121,7 @@ exports.updateMerchItem = async (req, res) => {
     try {
         const merchId = req.params.id;
         const userId = req.user.id;
-        const { category, url, title } = req.body;
+        const { category, url, title, price } = req.body;
 
         // Find and validate ownership
         const merchItem = await Merch.findOne({ _id: merchId, user: userId });
@@ -123,10 +129,16 @@ exports.updateMerchItem = async (req, res) => {
             return res.status(404).json({ error: 'Merch item not found or access denied' });
         }
 
+        // Validate price if provided (allow ranges like "500-1000" or single values)
+        if (price !== undefined && typeof price !== 'string' && typeof price !== 'number') {
+            return res.status(400).json({ error: 'Price must be a string or number' });
+        }
+
         // Update fields
         if (category) merchItem.category = category;
         if (url) merchItem.url = url;
         if (title) merchItem.title = title;
+        if (price !== undefined) merchItem.price = price || null;
 
         // Handle image updates
         if (req.files['image']) {
