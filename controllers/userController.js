@@ -2,6 +2,11 @@ const User = require('../models/User');
 const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcrypt');
+const Shout = require('../models/Shout');
+const Gallery = require('../models/Gallery');
+const ContactInfo = require('../models/ContactInfo');
+const Merch = require('../models/Merch');
+const SocialLink = require('../models/SocialLink');
 
 
 exports.uploadProfileImage = async (req, res) => {
@@ -125,41 +130,45 @@ exports.getUserById = async (req, res) => {
 
         if (!user) return res.status(404).json({ error: 'User not found' });
 
-        // Check if requester is the profile owner
-        const isOwner = req.user && req.user.id === req.params.id;
+        const isOwner = req.user && req.user.id.toString() === req.params.id;
         const publicUser = { ...user.toObject() };
 
-        // Apply visibility settings for non-owners
-        if (!isOwner && user.visibilitySettings) {
-            // Hide contact info
-            if (!user.visibilitySettings.contactInfo) {
+        if (isOwner) {
+            // 🔓 Owner: include all private data unconditionally
+            publicUser.shouts = await Shout.find({ user: user._id });
+            publicUser.gallery = await Gallery.find({ user: user._id });
+            publicUser.contactInfo = await ContactInfo.findOne({ user: user._id });
+            publicUser.merch = await Merch.find({ user: user._id });
+            publicUser.featuredLinks = await SocialLink.find({ user: user._id });
+        } else {
+            // 🔒 Not owner: only include if allowed by visibilitySettings
+
+            if (user.visibilitySettings?.shouts) {
+                publicUser.shouts = await Shout.find({ user: user._id });
+            }
+
+            if (user.visibilitySettings?.gallery) {
+                publicUser.gallery = await Gallery.find({ user: user._id });
+            }
+
+            if (user.visibilitySettings?.contactInfo) {
+                publicUser.contactInfo = await ContactInfo.findOne({ user: user._id });
+            } else {
                 publicUser.email = undefined;
                 publicUser.phoneNumber = undefined;
             }
 
-            // Hide bio if disabled
-            if (!user.visibilitySettings.bio) {
+            if (user.visibilitySettings?.merch) {
+                publicUser.merch = await Merch.find({ user: user._id });
+            }
+
+            if (user.visibilitySettings?.featuredLinks) {
+                publicUser.featuredLinks = await SocialLink.find({ user: user._id });
+            }
+
+            // Hide bio if needed
+            if (!user.visibilitySettings?.bio) {
                 publicUser.bio = undefined;
-            }
-
-            // Hide featuredLinks if disabled (will be handled in its controller)
-            if (!user.visibilitySettings.featuredLinks) {
-                publicUser.featuredLinks = undefined;
-            }
-
-            // Hide merch if disabled (will be handled in its controller)
-            if (!user.visibilitySettings.merch) {
-                publicUser.merch = undefined;
-            }
-
-            // Hide gallery if disabled (will be handled in its controller)
-            if (!user.visibilitySettings.gallery) {
-                publicUser.gallery = undefined;
-            }
-
-            // Hide shouts if disabled (will be handled in its controller)
-            if (!user.visibilitySettings.shouts) {
-                publicUser.shouts = undefined;
             }
         }
 
