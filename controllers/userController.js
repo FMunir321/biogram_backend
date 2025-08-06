@@ -7,6 +7,7 @@ const Gallery = require('../models/Gallery');
 const ContactInfo = require('../models/ContactInfo');
 const Merch = require('../models/Merch');
 const SocialLink = require('../models/SocialLink');
+const Thumbnail = require('../models/Thumbnail');
 
 
 exports.uploadProfileImage = async (req, res) => {
@@ -133,42 +134,59 @@ exports.getUserById = async (req, res) => {
         const isOwner = req.user && req.user.id.toString() === req.params.id;
         const publicUser = { ...user.toObject() };
 
+        // 🔗 Social Links: Always return regardless of user type or visibility settings
+        publicUser.socialLinks = await SocialLink.find({ userId: user._id });
+
         if (isOwner) {
             // 🔓 Owner: include all private data unconditionally
             publicUser.shouts = await Shout.find({ userId: user._id });
             publicUser.gallery = await Gallery.find({ user: user._id });
             publicUser.contactInfo = await ContactInfo.findOne({ user: user._id });
             publicUser.merch = await Merch.find({ user: user._id });
-            publicUser.featuredLinks = await SocialLink.find({ userId: user._id });
+            publicUser.featuredLinks = await Thumbnail.find({ user: user._id });
         } else {
             // 🔒 Not owner: only include if allowed by visibilitySettings
 
+            // Shouts
             if (user.visibilitySettings?.shouts) {
                 publicUser.shouts = await Shout.find({ userId: user._id });
+            } else {
+                publicUser.shouts = { message: "Shouts are not publicly visible" };
             }
 
+            // Gallery
             if (user.visibilitySettings?.gallery) {
                 publicUser.gallery = await Gallery.find({ user: user._id });
+            } else {
+                publicUser.gallery = { message: "Gallery is not publicly visible" };
             }
 
+            // Contact Info
             if (user.visibilitySettings?.contactInfo) {
                 publicUser.contactInfo = await ContactInfo.findOne({ user: user._id });
             } else {
+                publicUser.contactInfo = { message: "Contact information is not publicly visible" };
                 publicUser.email = undefined;
                 publicUser.phoneNumber = undefined;
             }
 
+            // Merch
             if (user.visibilitySettings?.merch) {
                 publicUser.merch = await Merch.find({ user: user._id });
+            } else {
+                publicUser.merch = { message: "Merchandise is not publicly visible" };
             }
 
+            // Featured Links (Thumbnails)
             if (user.visibilitySettings?.featuredLinks) {
-                publicUser.featuredLinks = await SocialLink.find({ userId: user._id });
+                publicUser.featuredLinks = await Thumbnail.find({ user: user._id });
+            } else {
+                publicUser.featuredLinks = { message: "Featured links are not publicly visible" };
             }
 
-            // Hide bio if needed
+            // Bio
             if (!user.visibilitySettings?.bio) {
-                publicUser.bio = undefined;
+                publicUser.bio = { message: "Bio is not publicly visible" };
             }
         }
 
