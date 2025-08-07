@@ -59,7 +59,12 @@ const UserSchema = new mongoose.Schema({
         }]
     },
     deletionScheduled: { type: Boolean, default: false },
-    deletionScheduledAt: Date
+    deletionScheduledAt: Date,
+    profileTemplate: {
+        type: String,
+        enum: ['temp1', 'temp2', 'temp3', 'temp4', 'temp5', 'temp6'],
+        default: 'temp1'
+    }
 }, {
     // Add this to handle either email or phone requirement
     validate: {

@@ -10,6 +10,7 @@ const SocialLink = require('../models/SocialLink');
 const Thumbnail = require('../models/Thumbnail');
 
 
+
 exports.uploadProfileImage = async (req, res) => {
     try {
         if (!req.file) {
@@ -123,7 +124,7 @@ exports.getAllUsers = async (req, res) => {
     }
 };
 
-// Get single user by ID (with visibility settings applied for non-owners)
+// Get single user by ID (with profile template applied)
 exports.getUserById = async (req, res) => {
     try {
         const user = await User.findById(req.params.id)
@@ -192,9 +193,39 @@ exports.getUserById = async (req, res) => {
 
         res.status(200).json(publicUser);
     } catch (error) {
+        console.error('Get user by ID error:', error);
         if (error.name === 'CastError') {
             return res.status(400).json({ error: 'Invalid user ID' });
         }
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+// Update user's profile template
+exports.updateProfileTemplate = async (req, res) => {
+    try {
+        const { profileTemplate } = req.body;
+
+        // Validate template value
+        const validTemplates = ['temp1', 'temp2', 'temp3', 'temp4', 'temp5', 'temp6'];
+        if (!validTemplates.includes(profileTemplate)) {
+            return res.status(400).json({ 
+                error: 'Invalid template. Valid options: ' + validTemplates.join(', ') 
+            });
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+            req.user.id,
+            { profileTemplate },
+            { new: true, runValidators: true }
+        ).select('profileTemplate');
+
+        res.status(200).json({
+            message: 'Profile template updated successfully',
+            profileTemplate: updatedUser.profileTemplate
+        });
+    } catch (error) {
+        console.error('Update profile template error:', error);
         res.status(500).json({ error: 'Server error' });
     }
 };

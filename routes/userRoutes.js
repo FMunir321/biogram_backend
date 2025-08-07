@@ -9,6 +9,7 @@ router.get('/:id', auth, userController.getUserById)
 router.patch('/profile-image', auth, uploadProfileImage, userController.uploadProfileImage);
 router.patch('/visibility', auth, userController.updateVisibilitySetting);
 router.patch('/bio', auth, userController.updateBio);
+router.patch('/profile-template', auth, userController.updateProfileTemplate);
 router.put('/change-password', auth, userController.changePassword);
 router.delete('/delete-account', auth, userController.deleteAccount);
 router.post('/recover-account', userController.recoverAccount);
