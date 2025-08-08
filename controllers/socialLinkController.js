@@ -16,7 +16,6 @@ exports.createSocialLink = async (req, res) => {
 
 // PUT /social-links/:id
 exports.updateSocialLink = async (req, res) => {
-  console.log('Update social link request:', req.body);
   try {
     const { id } = req.params;
     const userId = req.user.id; // Extracted from JWT token
